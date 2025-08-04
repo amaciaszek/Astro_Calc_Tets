@@ -1,3 +1,46 @@
+async function getJulianDateNoon() {
+    const lat = parseFloat(document.getElementById('latitude').value);
+    const lon = parseFloat(document.getElementById('longitude').value);
+    const dateString = document.getElementById('date').value;
+
+    const apiUrl = `https://timezone.bertold.org/timezone?lat=${lat}&lon=${lon}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        if (data.Zones.length > 0) {
+            const timezoneId = data.Zones[0].TimezoneId;
+            return calculateJulianDates(dateString, timezoneId);
+        } else {
+            console.error('No timezone data available for the provided coordinates.');
+            return null;
+        }
+    } catch (error) {
+        console.error('Failed to fetch timezone data:', error);
+        return null;
+    }
+}
+
+async function calculateJulianDates(dateString, timezoneId) {
+    const date = new Date(dateString);
+    date.setUTCHours(12, 0, 0, 0); // Set to UTC noon
+
+    const utcOffset = timezoneOffsets[timezoneId]; // Retrieve the base UTC offset
+    const isDst = isDaylightSavingTime(date) && daylightSavings[timezoneId]; // Check if DST is applicable
+
+    const totalOffset = isDst ? utcOffset + 1 : utcOffset;
+
+    const julianDates = [];
+
+    for (let i = 0; i < 24; i++) { // Loop for three hours starting from noon
+        const adjustedDate = new Date(date.getTime()); // Create a copy of the original date
+        adjustedDate.setUTCHours(adjustedDate.getUTCHours() + i - totalOffset); // Adjust to local time
+        const julianDate = dateToJulianDate(adjustedDate);
+        julianDates.push(julianDate);
+    }
+
+    return julianDates;
+}
 
 function dateToJulianDate(date) {
     const time = date.getTime();
@@ -5,6 +48,14 @@ function dateToJulianDate(date) {
     return julianDate;
 }
 
+function isDaylightSavingTime(date) {
+    var year = date.getFullYear();
+    var dstStart = new Date(Date.UTC(year, 2, 14, 2)); // Second Sunday of March
+    dstStart.setDate(14 - (dstStart.getUTCDay() + 1) % 7);
+    var dstEnd = new Date(Date.UTC(year, 10, 7, 2)); // First Sunday of November
+    dstEnd.setDate(7 - (dstEnd.getUTCDay() + 1) % 7);
+    return date >= dstStart && date < dstEnd;
+}
 
 // Predefined timezone offsets and DST observance based on your data
 const timezoneOffsets = {
