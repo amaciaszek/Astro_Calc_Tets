@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moon Info</title>
+    <script src="https://cdn.jsdelivr.net/gh/lizard-isana/orb.js@v2.4/build/orb.v2.min.js"></script>
+    <script src="https://faisalr.github.io/astro.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label, input {
+            display: block;
+            margin: 10px 0;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        td, th {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        .moon-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .moon-container img {
+            border-radius: 50%;
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+            transition: transform 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Moon Info</h2>
+        <label for="latitude">Latitude:</label>
+        <input type="number" id="latitude" step="0.0001" required>
+        
+        <label for="longitude">Longitude:</label>
+        <input type="number" id="longitude" step="0.0001" required>
+        
+        <label for="julianDate">Julian Date:</label>
+        <input type="number" id="julianDate" step="0.0001" required>
+        
+        <button onclick="calculateMoonInfo()">Calculate Moon Info</button>
+        <button onclick="setDefaultValues()">Set Default Values</button>
+        
+        <h3 id="result"></h3>
+        
+        <table>
+            <tr>
+                <th>Parameter</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Moon Phase</td>
+                <td id="moonPhase"></td>
+            </tr>
+            <tr>
+                <td>Percent Illuminated</td>
+                <td id="percentIlluminated"></td>
+            </tr>
+            <tr>
+                <td>Apparent Size (arcminutes)</td>
+                <td id="apparentSize"></td>
+            </tr>
+            <tr>
+                <td>Moonrise</td>
+                <td id="moonrise"></td>
+            </tr>
+            <tr>
+                <td>Moonset</td>
+                <td id="moonset"></td>
+            </tr>
+            <tr>
+                <td>Next New Moon</td>
+                <td id="nextNewMoon"></td>
+            </tr>
+            <tr>
+                <td>RA (Right Ascension)</td>
+                <td id="ra"></td>
+            </tr>
+            <tr>
+                <td>DEC (Declination)</td>
+                <td id="dec"></td>
+            </tr>
+            <tr>
+                <td>Altitude</td>
+                <td id="altitude"></td>
+            </tr>
+            <tr>
+                <td>Azimuth</td>
+                <td id="azimuth"></td>
+            </tr>
+        </table>
+
+        <div class="moon-container">
+            <img id="moonImage" src="" alt="Moon Image">
+        </div>
+    </div>
+    
+    <script>
+        function setDefaultValues() {
+            document.getElementById('latitude').value = 42;
+            document.getElementById('longitude').value = -72;
+            document.getElementById('julianDate').value = 2461003.86933;
+        }
+
+        function calculateMoonInfo() {
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const julianDate = parseFloat(document.getElementById('julianDate').value);
+
+            if (isNaN(latitude) || isNaN(longitude) || isNaN(julianDate)) {
+                alert('Please enter valid numbers for latitude, longitude, and Julian date.');
+                return;
+            }
+
+            const date = julianToDate(julianDate);
+            const observer = new Astronomy.Observer(latitude, longitude, 0); // Correctly creating an observer instance
+
+            console.log(Observer:, observer);
+
+            const moon = new Orb.Luna();
+            const moonPosition = getCelestialPosition(moon, date, observer);
+            const moonPhase = Astronomy.MoonPhase(date); // Using the Astronomy.MoonPhase method
+            const moonIllumination = Astronomy.Illumination(Astronomy.Body.Moon, date);
+
+            const percentIlluminated = moonIllumination.phase_fraction * 100;
+            const distanceKm = moonIllumination.geo_dist * Astronomy.KM_PER_AU;
+            const apparentSizeDegrees = calculateApparentSize(distanceKm);
+            const apparentSizeArcminutes = apparentSizeDegrees * 60;
+
+            console.log(Calculating moonrise and moonset...);
+            const moonrise = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observer, +1, date, 1);
+            const moonset = Astronomy.SearchRiseSet(Astronomy.Body.Moon, observer, -1, date, 1);
+            
+            // Search for the next new moon
+            let nextNewMoon = Astronomy.SearchMoonQuarter(date);
+            while (nextNewMoon.quarter !== 0) {
+                nextNewMoon = Astronomy.NextMoonQuarter(nextNewMoon);
+            }
+
+            console.log(Moonrise: ${moonrise});
+            console.log(Moonset: ${moonset});
+            console.log(Next New Moon: ${nextNewMoon});
+
+            document.getElementById('moonPhase').textContent = ${moonPhase.toFixed(4)}°;
+            document.getElementById('percentIlluminated').textContent = ${percentIlluminated.toFixed(2)}%;
+            document.getElementById('apparentSize').textContent = ${apparentSizeArcminutes.toFixed(2)} arcminutes;
+
+            if (moonrise) {
+                document.getElementById('moonrise').textContent = formatDate(moonrise.date);
+            } else {
+                document.getElementById('moonrise').textContent = 'No rise time found';
+            }
+
+            if (moonset) {
+                document.getElementById('moonset').textContent = formatDate(moonset.date);
+            } else {
+                document.getElementById('moonset').textContent = 'No set time found';
+            }
+
+            if (nextNewMoon && nextNewMoon.time && nextNewMoon.time.date) {
+                document.getElementById('nextNewMoon').textContent = formatDate(nextNewMoon.time.date);
+            } else {
+                document.getElementById('nextNewMoon').textContent = 'No new moon found';
+            }
+
+            document.getElementById('ra').textContent = ${moonPosition.ra}°;
+            document.getElementById('dec').textContent = ${moonPosition.dec}°;
+            document.getElementById('altitude').textContent = ${moonPosition.elevation}°;
+            document.getElementById('azimuth').textContent = ${moonPosition.azimuth}°;
+
+            updateMoonImage(moonPhase);
+
+            console.log(Latitude: ${latitude});
+            console.log(Longitude: ${longitude});
+            console.log(Julian Date: ${julianDate});
+            console.log(Date: ${date});
+            console.log(Moon Position: ${JSON.stringify(moonPosition)});
+            console.log(Moon Phase: ${moonPhase});
+            console.log(Percent Illuminated: ${percentIlluminated});
+            console.log(Distance to Moon (km): ${distanceKm});
+            console.log(Apparent Size (degrees): ${apparentSizeDegrees});
+            console.log(Apparent Size (arcminutes): ${apparentSizeArcminutes});
+            console.log(RA: ${moonPosition.ra});
+            console.log(DEC: ${moonPosition.dec});
+            console.log(Altitude: ${moonPosition.elevation});
+            console.log(Azimuth: ${moonPosition.azimuth});
+        }
+
+        function getCelestialPosition(target, date, observer) {
+            const radec = target.radec(date); // equatorial spherical coordinates (ra, dec, distance)
+            const raDegrees = radec.ra * 15; // Convert RA from hours to degrees
+
+            const observeTarget = new Orb.Observation({ observer: observer, target: target });
+            const horizontal = observeTarget.azel(date); // horizontal coordinates (azimuth, elevation)
+
+            return {
+                ra: raDegrees.toFixed(6),
+                dec: radec.dec.toFixed(6),
+                distance: radec.distance.toFixed(6),
+                azimuth: horizontal.azimuth.toFixed(2),
+                elevation: horizontal.elevation.toFixed(2)
+            };
+        }
+
+        function julianToDate(jd) {
+            const jdOffset = 2440587.5;
+            const msOffset = (jd - jdOffset) * 86400000;
+            return new Date(msOffset);
+        }
+
+        function calculateApparentSize(distanceKm) {
+            const moonDiameterKm = 3474.8;
+            const apparentSizeRadians = 2 * Math.atan((moonDiameterKm / 2) / distanceKm);
+            const apparentSizeDegrees = apparentSizeRadians * (180 / Math.PI);
+            return apparentSizeDegrees;
+        }
+
+        function formatDate(date) {
+            if (!date) return 'Invalid Date';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hour = String(date.getHours()).padStart(2, '0');
+            const minute = String(date.getMinutes()).padStart(2, '0');
+            const second = String(date.getSeconds()).padStart(2, '0');
+            return ${year}-${month}-${day} ${hour}:${minute}:${second};
+        }
+
+        function updateMoonImage(phase) {
+            const adjustedPhase = -1.006159632992680 * phase + 179.795214276836;
+            console.log(Updating moon image for adjusted phase: ${adjustedPhase});
+            const phaseIndex = Math.trunc(1.97707720679649 * phase + 7579.95078339673);
+            console.log(Calculated phase index: ${phaseIndex});
+            const phaseStr = String(phaseIndex).padStart(4, '0');
+            console.log(Formatted phase string: ${phaseStr});
+            const imgSrc = https://svs.gsfc.nasa.gov/vis/a000000/a005000/a005048/frames/730x730_1x1_30p/moon.${phaseStr}.jpg;
+            console.log(Image source URL: ${imgSrc});
+            const moonImage = document.getElementById('moonImage');
+            moonImage.src = imgSrc;
+        }
+    </script>
+</body>
+</html>

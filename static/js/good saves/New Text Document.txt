@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Celestial Twilight Times</title>
+    <script src="/static/js/julian.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/lizard-isana/orb.js@2.3/build/orb.v2.js"></script>
+</head>
+<body>
+    <h1>Calculate Twilight Times</h1>
+    
+    <div>
+        <label for="latitude">Latitude:</label>
+        <input type="text" id="latitude" value="42">
+    </div>
+    <div>
+        <label for="longitude">Longitude:</label>
+        <input type="text" id="longitude" value="-72">
+    </div>
+    <div>
+        <label for="date">Date:</label>
+        <input type="date" id="date" value="2024-07-23">
+    </div>
+    <button onclick="calculatePlanetIntervals()">Calculate</button>
+
+    <div id="results"></div>
+
+    <script>
+        async function getJulianDateNoon() {
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lon = parseFloat(document.getElementById('longitude').value);
+            const dateString = document.getElementById('date').value;
+
+            const apiUrl = `https://timezone.bertold.org/timezone?lat=${lat}&lon=${lon}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                if (data.Zones.length > 0) {
+                    const timezoneId = data.Zones[0].TimezoneId;
+                    return calculateJulianDates(dateString, timezoneId);
+                } else {
+                    console.error('No timezone data available for the provided coordinates.');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Failed to fetch timezone data:', error);
+                return null;
+            }
+        }
+
+        async function calculatePlanetIntervals() {
+            const planets = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"];
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const dateStr = document.getElementById('date').value;
+
+            const julianDates = await getJulianDateNoon();
+            const todayNoon = julianDates[0];
+            console.log(`Today Noon Julian date: ${todayNoon}`);
+
+            let resultsHTML = '<table border="1"><tr><th>Planet</th><th>Rise Time</th><th>Set Time</th><th>Culmination Time</th><th>Culmination Altitude</th><th>Apparent Size</th></tr>';
+
+            for (const planet of planets) {
+                const intervalData = await findPlanetInterval(planet, latitude, longitude, dateStr, todayNoon);
+                resultsHTML += `<tr>
+                    <td>${planet}</td>
+                    <td>${intervalData.riseTime ? intervalData.riseTime.toFixed(5) : 'N/A'}</td>
+                    <td>${intervalData.setTime ? intervalData.setTime.toFixed(5) : 'N/A'}</td>
+                    <td>${intervalData.culTime ? intervalData.culTime.toFixed(5) : 'N/A'}</td>
+                    <td>${intervalData.culAlt ? intervalData.culAlt.toFixed(5) : 'N/A'}</td>
+                    <td>${intervalData.apparentSize}</td>
+                </tr>`;
+            }
+
+            resultsHTML += '</table>';
+            document.getElementById('results').innerHTML = resultsHTML;
+        }
+
+        function findSunInterval(latitude, longitude, todayNoon, tomorrowNoon, targetAngle) {
+            const x = startTimeFind("sun", latitude, longitude, todayNoon, targetAngle);
+            const y = endTimeFind("sun", latitude, longitude, tomorrowNoon, targetAngle);
+            console.log(`Sun Interval: Start=${x}, End=${y}`);
+            return [x, y];
+        }
+
+        function startTimeFind(bodyName, latitude, longitude, todayNoon, targetAngle) {
+            console.log(`Finding start time for ${bodyName}...`);
+            const chunkOneSize = 1 / 6;
+            for (let i = 0; i < 7; i++) {
+                let current = todayNoon + i * chunkOneSize;
+                let curAlt = calculateAltitude(bodyName, latitude, longitude, current);
+                console.log(`Chunk 1: current=${current}, curAlt=${curAlt}`);
+                if (curAlt < targetAngle) {
+                    const chunkTwoSize = 1 / 24;
+                    for (let j = 0; j < 25; j++) {
+                        let current2 = current - j * chunkTwoSize;
+                        if (current2 < todayNoon) current2 = todayNoon;
+                        let curAlt2 = calculateAltitude(bodyName, latitude, longitude, current2);
+                        console.log(`Chunk 2: current2=${current2}, curAlt2=${curAlt2}`);
+                        if (curAlt2 > targetAngle) {
+                            const chunkThreeSize = 1 / 240;
+                            for (let k = 0; k < 240; k++) {
+                                let current3 = current2 + k * chunkThreeSize;
+                                if (current3 < todayNoon) current3 = todayNoon;
+                                let curAlt3 = calculateAltitude(bodyName, latitude, longitude, current3);
+                                console.log(`Chunk 3: current3=${current3}, curAlt3=${curAlt3}`);
+                                if (curAlt3 < targetAngle) {
+                                    const chunkFourSize = 1 / 720;
+                                    for (let l = 0; l < 720; l++) {
+                                        let current4 = current3 - l * chunkFourSize;
+                                        if (current4 < todayNoon) current4 = todayNoon;
+                                        let curAlt4 = calculateAltitude(bodyName, latitude, longitude, current4);
+                                        console.log(`Chunk 4: current4=${current4}, curAlt4=${curAlt4}`);
+                                        if (curAlt4 < targetAngle) {
+                                            const chunkFiveSize = 1 / 1440;
+                                            for (let m = 0; m < 1440; m++) {
+                                                let current5 = current4 + m * chunkFiveSize;
+                                                if (current5 < todayNoon) current5 = todayNoon;
+                                                let curAlt5 = calculateAltitude(bodyName, latitude, longitude, current5);
+                                                console.log(`Chunk 5: current5=${current5}, curAlt5=${curAlt5}`);
+                                                if (curAlt5 < targetAngle) {
+                                                    console.log(`Start Time Found: ${current5}`);
+                                                    return current5;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return null;  // Ensure it returns something even if no valid time is found
+        }
+
+        function endTimeFind(bodyName, latitude, longitude, tomorrowNoon, targetAngle) {
+            console.log(`Finding end time for ${bodyName}...`);
+            const chunkOneSize = 1 / 6;
+            for (let i = 0; i < 7; i++) {
+                let current = tomorrowNoon - i * chunkOneSize;
+                if (current > tomorrowNoon) current = tomorrowNoon;
+                let curAlt = calculateAltitude(bodyName, latitude, longitude, current);
+                console.log(`Chunk 1: current=${current}, curAlt=${curAlt}`);
+                if (curAlt > targetAngle) {
+                    const chunkTwoSize = 1 / 24;
+                    for (let j = 0; j < 25; j++) {
+                        let current2 = current - j * chunkTwoSize;
+                        if (current2 > tomorrowNoon) current2 = tomorrowNoon;
+                        let curAlt2 = calculateAltitude(bodyName, latitude, longitude, current2);
+                        console.log(`Chunk 2: current2=${current2}, curAlt2=${curAlt2}`);
+                        if (curAlt2 < targetAngle) {
+                            const chunkThreeSize = 1 / 240;
+                            for (let k = 0; k < 240; k++) {
+                                let current3 = current2 + k * chunkThreeSize;
+                                if (current3 > tomorrowNoon) current3 = tomorrowNoon;
+                                let curAlt3 = calculateAltitude(bodyName, latitude, longitude, current3);
+                                console.log(`Chunk 3: current3=${current3}, curAlt3=${curAlt3}`);
+                                if (curAlt3 > targetAngle) {
+                                    const chunkFourSize = 1 / 720;
+                                    for (let l = 0; l < 720; l++) {
+                                        let current4 = current3 - l * chunkFourSize;
+                                        if (current4 > tomorrowNoon) current4 = tomorrowNoon;
+                                        let curAlt4 = calculateAltitude(bodyName, latitude, longitude, current4);
+                                        console.log(`Chunk 4: current4=${current4}, curAlt4=${curAlt4}`);
+                                        if (curAlt4 < targetAngle) {
+                                            const chunkFiveSize = 1 / 1440;
+                                            for (let m = 0; m < 1440; m++) {
+                                                let current5 = current4 + m * chunkFiveSize;
+                                                if (current5 > tomorrowNoon) current5 = tomorrowNoon;
+                                                let curAlt5 = calculateAltitude(bodyName, latitude, longitude, current5);
+                                                console.log(`Chunk 5: current5=${current5}, curAlt5=${curAlt5}`);
+                                                if (curAlt5 < targetAngle) {
+                                                    console.log(`End Time Found: ${current5}`);
+                                                    return current5;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return null;  // Ensure it returns something even if no valid time is found
+        }
+
+        async function findPlanetInterval(bodyName, latitude, longitude, dateStr, todayNoon) {
+            const twilightTimes = findSunInterval(latitude, longitude, todayNoon, todayNoon + 1, -12);
+            const twilightStart = twilightTimes[0];
+            const twilightEnd = twilightTimes[1];
+
+            console.log(`Twilight Start: ${twilightStart}, Twilight End: ${twilightEnd}`);
+
+            const startAlt = calculateAltitude(bodyName, latitude, longitude, twilightStart);
+            const endAlt = calculateAltitude(bodyName, latitude, longitude, twilightEnd);
+
+            function refineTimes(riseTime, setTime) {
+                let cul = (setTime + riseTime) / 2;
+                let culAlt = calculateAltitude(bodyName, latitude, longitude, cul);
+
+                if (twilightStart > riseTime) riseTime = twilightStart;
+                if (twilightStart > cul) cul = twilightStart;
+                if (twilightEnd < setTime) setTime = twilightEnd;
+                if (twilightEnd < cul) cul = twilightEnd;
+
+                culAlt = calculateAltitude(bodyName, latitude, longitude, cul);
+                console.log(`Refined Times: Rise=${riseTime}, Set=${setTime}, Cul=${cul}, Cul Alt=${culAlt}`);
+                return { riseTime, setTime, cul, culAlt };
+            }
+
+            let riseTime, setTime;
+            if (startAlt < 0 && endAlt > 0) {
+                riseTime = endTimeFind(bodyName, latitude, longitude, twilightEnd, 0);
+                setTime = startTimeFind(bodyName, latitude, longitude, twilightEnd, 0);
+            } else if (startAlt > 0 && endAlt > 0) {
+                riseTime = endTimeFind(bodyName, latitude, longitude, twilightEnd, 0);
+                setTime = startTimeFind(bodyName, latitude, longitude, twilightEnd, 0);
+            } else if (startAlt > 0 && endAlt < 0) {
+                riseTime = endTimeFind(bodyName, latitude, longitude, twilightStart, 0);
+                setTime = startTimeFind(bodyName, latitude, longitude, twilightStart, 0);
+            }
+
+            const refinedTimes = refineTimes(riseTime, setTime);
+
+            const apparentSize = calculateApparentSize(bodyName, twilightStart);
+            return {
+                riseTime: refinedTimes.riseTime,
+                setTime: refinedTimes.setTime,
+                culTime: refinedTimes.cul,
+                culAlt: refinedTimes.culAlt,
+                apparentSize: apparentSize
+            };
+        }
+
+        function calculateAltitude(bodyName, latitude, longitude, jd) {
+            const date = new Date((jd - 2440587.5) * 86400000); // Convert JD to Date
+            if (isNaN(date.getTime())) {
+                console.log(`Invalid Julian Date: ${jd}`);
+                return NaN;
+            }
+            let position;
+            try {
+                if (bodyName.toLowerCase() === 'sun') {
+                    position = new Orb.Sun().radec(date);
+                } else if (bodyName.toLowerCase() === 'moon') {
+                    position = new Orb.Luna().radec(date);
+                } else {
+                    const planet = new Orb[bodyName.charAt(0).toUpperCase() + bodyName.slice(1).toLowerCase()]();
+                    position = planet.radec(date);
+                }
+                console.log(`Position for ${bodyName}:`, position);
+            } catch (error) {
+                console.error(`Error calculating position for ${bodyName}:`, error);
+                return NaN;
+            }
+            const horizontal = new Orb.Observation({
+                observer: {
+                    latitude: latitude,
+                    longitude: longitude,
+                    altitude: 0
+                },
+                target: position
+            }).azel(date);
+            console.log(`calculateAltitude: date=${date}, position=${JSON.stringify(position)}, horizontal=${horizontal.elevation}`);
+            return horizontal.elevation;
+        }
+
+        const sun = new Orb.Sun();
+        const moon = new Orb.Luna();
+        const planets = {
+            "Mercury": 4881.1, // Diameter in km
+            "Venus": 12103.6,
+            "Mars": 6792.4,
+            "Jupiter": 142984,
+            "Saturn": 120536,
+            "Uranus": 51118,
+            "Neptune": 49528
+        };
+        const planetRings = {
+            "Saturn": 280709.2,
+            "Uranus": 195276.2,
+            "Neptune": 125626.8
+        };
+
+        function calculateApparentSizeArcseconds(diameter, distance) {
+            console.log("di,dist", diameter, distance);
+            // Convert distance from AU to km (1 AU = 149,597,870.7 km)
+            const distanceKm = distance * 149597870.7;
+            // Calculate the apparent size in radians
+            const sizeRadians = 2 * Math.atan(diameter / (2 * distanceKm));
+            // Convert radians to degrees
+            const sizeDegrees = sizeRadians * (180 / Math.PI);
+            // Convert degrees to arcseconds
+            return sizeDegrees * 3600;
+        }
+
+        function calculateApparentSize(bodyName, jd) {
+            const date = new Date((jd - 2440587.5) * 86400000); // Convert JD to Date
+            let position;
+            try {
+                if (bodyName.toLowerCase() === 'sun') {
+                    position = new Orb.Sun().radec(date);
+                } else if (bodyName.toLowerCase() === 'moon') {
+                    position = new Orb.Luna().radec(date);
+                } else {
+                    const planet = new Orb[bodyName.charAt(0).toUpperCase() + bodyName.slice(1).toLowerCase()]();
+                    position = planet.radec(date);
+                    console.log('XXXXX');
+                    console.log(position.distance);
+                }
+                let diameter = planets[bodyName.charAt(0).toUpperCase() + bodyName.slice(1).toLowerCase()];
+                let apparentSize = calculateApparentSizeArcseconds(diameter, position.distance).toFixed(2);
+
+                if (bodyName.charAt(0).toUpperCase() + bodyName.slice(1).toLowerCase() in planetRings) {
+                    const ringsDiameter = planetRings[bodyName.charAt(0).toUpperCase() + bodyName.slice(1).toLowerCase()];
+                    let apparentSizeWithRings = calculateApparentSizeArcseconds(ringsDiameter, position.distance).toFixed(2);
+                    return `${apparentSize}/${apparentSizeWithRings}`;
+                }
+                return apparentSize;
+            } catch (error) {
+                console.error(`Error calculating apparent size for ${bodyName}:`, error);
+                return NaN;
+            }
+        }
+    </script>
+</body>
+</html>
