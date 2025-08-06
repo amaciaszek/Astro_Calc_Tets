@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dark Sky Intervals — Enhanced Timeline</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 20px; 
+      background: #f8f9fa;
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    /* View Toggle */
+    .view-toggle {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .toggle-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .toggle-btn {
+      background: #ecf0f1;
+      color: #2c3e50;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      font-weight: 500;
+    }
+    
+    .toggle-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);
+    }
+    
+    .toggle-btn:hover:not(.active) {
+      background: #d5dbdb;
+    }
+
+    /* Controls */
+    .controls {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .control-group label {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .control-group select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .control-group input[type="number"] {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      width: 120px;
+    }
+    .control-group input[type="number"]:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    .control-group button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    .control-group button:hover {
+      background: #2980b9;
+    }
+    .control-group button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    /* Chart Container */
+    #chartContainer {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 400px;
+    }
+    
+    /* Enhanced Timeline View Styles */
+    .timeline-view {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      overflow-x: auto;
+    }
+    
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #ecf0f1;
+    }
+    
+    .timeline-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .timeline-legend {
+      display: flex;
+      gap: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .timeline-grid {
+      position: relative;
+      min-width: 1200px;
+    }
+    
+    .timeline-hours {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 80px 0 100px;
+      margin-bottom: 15px;
+      font-size: 11px;
+      color: #666;
+      font-weight: 500;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    
+    .timeline-rows {
+      position: relative;
+    }
+    
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      padding: 4px 0;
+    }
+    
+    .timeline-row:hover {
+      background-color: #f8f9fa;
+      transform: translateX(2px);
+    }
+    
+    .timeline-row.selected {
+      background-color: #e3f2fd;
+      border: 2px solid #2196f3;
+      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+    }
+    
+    .timeline-date {
+      width: 80px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #2c3e50;
+      text-align: right;
+      padding-right: 15px;
+      flex-shrink: 0;
+    }
+    
+    .timeline-bar-container {
+      flex: 1;
+      height: 32px;
+      position: relative;
+      background: linear-gradient(to right, 
+        #f8f9fa 0%, #f8f9fa 15%,
+        #e9ecef 15%, #e9ecef 85%,
+        #f8f9fa 85%, #f8f9fa 100%);
+      border-radius: 4px;
+      margin: 0 6px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .timeline-interval {
+      position: absolute;
+      height: 28px;
+      top: 2px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
+      border: 2px solid rgba(255,255,255,0.2);
+      min-width: 40px;
+    }
+    
+    .timeline-interval:hover {
+      transform: scaleY(1.15) translateY(-1px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+      z-index: 10;
+    }
+    
+    .timeline-interval.selected {
+      background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+      box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6);
+      transform: scaleY(1.25) translateY(-2px);
+      z-index: 15;
+      border-color: #fff;
+    }
+    
+    .timeline-interval-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+    }
+    
+    .timeline-interval-duration {
+      font-size: 12px;
+      color: white;
+      font-weight: 700;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      line-height: 1;
+    }
+    
+    .timeline-interval-times {
+      font-size: 9px;
+      color: rgba(255,255,255,0.9);
+      font-weight: 500;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      white-space: nowrap;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    
+    .timeline-day {
+      width: 60px;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      flex-shrink: 0;
+      font-weight: 500;
+    }
+
+    /* Duration-based styling */
+    .timeline-interval.short { /* < 2 hours */
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    }
+    .timeline-interval.medium { /* 2-5 hours */
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .timeline-interval.long { /* > 5 hours */
+      background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+    }
+
+    /* Mobile Timeline Optimizations */
+    @media (max-width: 768px) {
+      .timeline-view {
+        padding: 15px;
+      }
+      
+      .timeline-grid {
+        min-width: 800px;
+      }
+      
+      .timeline-date {
+        width: 60px;
+        font-size: 10px;
+      }
+      
+      .timeline-day {
+        width: 40px;
+        font-size: 9px;
+      }
+      
+      .timeline-interval-duration {
+        font-size: 10px;
+      }
+      
+      .timeline-interval-times {
+        font-size: 8px;
+      }
+      
+      .timeline-legend {
+        flex-direction: column;
+        gap: 5px;
+      }
+      
+      .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+
+    /* Card Layout Styles */
+    .intervals-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    
+    .interval-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 16px;
+      color: white;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .interval-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .interval-card.selected {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 35px rgba(118, 75, 162, 0.3);
+      border: 2px solid #ffd700;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    
+    .date-info .date {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    
+    .date-info .day {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .duration-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+    
+    .time-info {
+      margin-bottom: 16px;
+    }
+    
+    .time-range {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .start-time, .end-time {
+      background: rgba(255,255,255,0.15);
+      padding: 6px 10px;
+      border-radius: 8px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .arrow {
+      opacity: 0.8;
+      font-weight: normal;
+    }
+    
+    .timeline-container {
+      position: relative;
+    }
+    
+    .timeline-track {
+      background: rgba(255,255,255,0.2);
+      height: 8px;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .timeline-bar {
+      background: linear-gradient(90deg, #ffeaa7, #fdcb6e);
+      height: 100%;
+      border-radius: 4px;
+      position: absolute;
+      box-shadow: 0 2px 8px rgba(253, 203, 110, 0.4);
+    }
+    
+    .timeline-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 10px;
+      opacity: 0.8;
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 20px;
+      color: white;
+      margin-top: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      display: none;
+    }
+    
+    .detail-panel.visible {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .detail-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .detail-info h3 {
+      margin: 0 0 10px 0;
+      font-size: 24px;
+    }
+    
+    .detail-times {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    
+    .detail-timeline {
+      position: relative;
+      height: 20px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    
+    .detail-timeline-bar {
+      background: linear-gradient(90deg, #ffeaa7, #fdcb6e);
+      height: 100%;
+      border-radius: 10px;
+      position: absolute;
+      box-shadow: 0 2px 12px rgba(253, 203, 110, 0.6);
+    }
+
+    /* Stats */
+    .stats {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stat-item {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .loading {
+      text-align: center;
+      padding: 50px;
+      color: #666;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .intervals-container {
+        grid-template-columns: 1fr;
+        max-height: 500px;
+      }
+      
+      .interval-card {
+        padding: 14px;
+      }
+      
+      .card-header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      
+      .duration-badge {
+        align-self: flex-end;
+      }
+      
+      .time-range {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      
+      .detail-content {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+      
+      .toggle-buttons {
+        flex-direction: column;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .time-range {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+      
+      .arrow {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>🌙 Dark Sky Intervals — Enhanced Timeline</h1>
+  
+  <div class="view-toggle">
+    <div class="toggle-buttons">
+      <button class="toggle-btn active" data-view="timeline">📊 Timeline View</button>
+      <button class="toggle-btn" data-view="cards">📋 Card View</button>
+      <button class="toggle-btn" data-view="hybrid">🔄 Hybrid View</button>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <h3>Location Settings</h3>
+    <div class="control-group">
+      <label for="latitude">Latitude:</label>
+      <input type="number" id="latitude" step="0.000001" min="-90" max="90" value="42.550639" placeholder="42.550639">
+      <label for="longitude">Longitude:</label>
+      <input type="number" id="longitude" step="0.000001" min="-180" max="180" value="-72.876444" placeholder="-72.876444">
+      <button id="detectLocationBtn">Detect My Location</button>
+    </div>
+    
+    <h3>Calculation Settings</h3>
+    <div class="control-group">
+      <label for="sunThreshold">Sun Threshold:</label>
+      <select id="sunThreshold">
+        <option value="0">0° - Civil Twilight (horizon)</option>
+        <option value="-6">-6° - Nautical Twilight</option>
+        <option value="-12">-12° - Astronomical Twilight</option>
+        <option value="-18" selected>-18° - True Astronomical Dark</option>
+      </select>
+      <button id="updateBtn">Update Chart</button>
+    </div>
+  </div>
+  
+  <div id="chartContainer">
+    <div class="loading">Loading calculations...</div>
+  </div>
+  
+  <div id="detailPanel" class="detail-panel">
+    <div class="detail-content">
+      <div class="detail-info">
+        <h3 id="detailDate"></h3>
+        <div id="detailDay"></div>
+        <div class="detail-times">
+          <span id="detailStartTime"></span>
+          <span class="arrow">→</span>
+          <span id="detailEndTime"></span>
+        </div>
+        <div>Duration: <strong id="detailDuration"></strong></div>
+      </div>
+      <div>
+        <div class="detail-timeline">
+          <div class="detail-timeline-bar" id="detailTimelineBar"></div>
+        </div>
+        <div class="timeline-labels" style="margin-top: 8px;">
+          <span>4 PM</span>
+          <span>12 AM</span>
+          <span>11 AM</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="stats">
+    <h3>Statistics</h3>
+    <div class="stat-grid" id="stats"></div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@2/build/global/luxon.min.js"></script>
+  <script src="astronomical-calculations.js"></script>
+  <script src="noon-julian-calculator.js"></script>
+  
+  <script>
+    let globalData = null;
+    let currentView = 'timeline';
+    let selectedInterval = null;
+
+    // calculateIntervals function will be loaded from astronomical-calculations.js
+
+    // Function to get coordinates from input fields
+    function getCoordinates() {
+      const lat = parseFloat(document.getElementById('latitude').value);
+      const lon = parseFloat(document.getElementById('longitude').value);
+      
+      if (isNaN(lat) || isNaN(lon)) {
+        throw new Error('Please enter valid latitude and longitude coordinates');
+      }
+      if (lat < -90 || lat > 90) {
+        throw new Error('Latitude must be between -90 and 90 degrees');
+      }
+      if (lon < -180 || lon > 180) {
+        throw new Error('Longitude must be between -180 and 180 degrees');
+      }
+      
+      return { lat, lon };
+    }
+
+    // Function to detect user's location
+    function detectLocation() {
+      const detectBtn = document.getElementById('detectLocationBtn');
+      detectBtn.disabled = true;
+      detectBtn.textContent = 'Detecting...';
+      
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by this browser.');
+        detectBtn.disabled = false;
+        detectBtn.textContent = 'Detect My Location';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+          document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+          detectBtn.disabled = false;
+          detectBtn.textContent = 'Detect My Location';
+        },
+        function(error) {
+          let errorMsg = 'Location detection failed: ';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMsg += 'Permission denied by user.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMsg += 'Location information unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMsg += 'Location request timed out.';
+              break;
+            default:
+              errorMsg += 'Unknown error.';
+              break;
+          }
+          alert(errorMsg);
+          detectBtn.disabled = false;
+          detectBtn.textContent = 'Detect My Location';
+        }
+      );
+    }
+
+    function showDetailPanel(interval) {
+      selectedInterval = interval;
+      const panel = document.getElementById('detailPanel');
+      
+      document.getElementById('detailDate').textContent = interval.dayLabel;
+      document.getElementById('detailDay').textContent = interval.startDT.weekdayLong;
+      document.getElementById('detailStartTime').textContent = interval.startDT.toFormat('h:mm a');
+      document.getElementById('detailEndTime').textContent = interval.endDT.toFormat('h:mm a');
+      document.getElementById('detailDuration').textContent = `${interval.duration.toFixed(1)} hours`;
+      
+      // Update detail timeline
+      const totalMinutes = 19 * 60;
+      const startPercent = (interval.x0 * 60 / totalMinutes) * 100;
+      const widthPercent = ((interval.x1 - interval.x0) * 60 / totalMinutes) * 100;
+      
+      const timelineBar = document.getElementById('detailTimelineBar');
+      timelineBar.style.left = `${startPercent}%`;
+      timelineBar.style.width = `${widthPercent}%`;
+      
+      panel.classList.add('visible');
+    }
+
+    function hideDetailPanel() {
+      selectedInterval = null;
+      document.getElementById('detailPanel').classList.remove('visible');
+    }
+
+    function getDurationClass(duration) {
+      if (duration < 2) return 'short';
+      if (duration < 5) return 'medium';
+      return 'long';
+    }
+
+    function renderTimeline(data) {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      container.className = 'timeline-view';
+      
+      const { intervals, sunThreshold } = data;
+      
+      if (intervals.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 50px; color: #666;">
+            No dark sky intervals found with these criteria.
+          </div>
+        `;
+        return;
+      }
+
+      // Create enhanced timeline header
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'timeline-header';
+      headerDiv.innerHTML = `
+        <div class="timeline-title">Enhanced Dark Sky Timeline</div>
+        <div class="timeline-legend">
+          <span>📅 Next ${intervals.length} opportunities</span>
+          <span>🌞 Sun < ${sunThreshold}°</span>
+          <span>🌙 Moon below horizon</span>
+          <span style="color: #ff6b6b;">● Short (<2h)</span>
+          <span style="color: #667eea;">● Medium (2-5h)</span>
+          <span style="color: #26de81;">● Long (>5h)</span>
+        </div>
+      `;
+      container.appendChild(headerDiv);
+
+      // Create enhanced timeline grid
+      const gridDiv = document.createElement('div');
+      gridDiv.className = 'timeline-grid';
+      
+      // More detailed hour labels (every hour from 4PM to 11AM)
+      const hoursDiv = document.createElement('div');
+      hoursDiv.className = 'timeline-hours';
+      const hours = ['4PM', '5PM', '6PM', '7PM', '8PM', '9PM', '10PM', '11PM', '12AM', '1AM', '2AM', '3AM', '4AM', '5AM', '6AM', '7AM', '8AM', '9AM', '10AM', '11AM'];
+      
+      // Show every 2nd hour to prevent crowding but maintain precision
+      const displayHours = ['4PM', '6PM', '8PM', '10PM', '12AM', '2AM', '4AM', '6AM', '8AM', '10AM'];
+      displayHours.forEach(hour => {
+        const span = document.createElement('span');
+        span.textContent = hour;
+        hoursDiv.appendChild(span);
+      });
+      gridDiv.appendChild(hoursDiv);
+
+      // Enhanced timeline rows
+      const rowsDiv = document.createElement('div');
+      rowsDiv.className = 'timeline-rows';
+      
+      intervals.forEach((interval, index) => {
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
+        
+        // Date label
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'timeline-date';
+        dateDiv.textContent = interval.dayLabel;
+        row.appendChild(dateDiv);
+        
+        // Bar container with enhanced interval
+        const barContainer = document.createElement('div');
+        barContainer.className = 'timeline-bar-container';
+        
+        // Calculate more precise positioning based on your original x0, x1 values
+        const startPercent = (interval.x0 / 19) * 100;
+        const widthPercent = ((interval.x1 - interval.x0) / 19) * 100;
+        
+        const intervalBar = document.createElement('div');
+        intervalBar.className = `timeline-interval ${getDurationClass(interval.duration)}`;
+        intervalBar.style.left = `${startPercent}%`;
+        intervalBar.style.width = `${Math.max(widthPercent, 4)}%`; // Ensure minimum visibility while preserving proportions
+        
+        // Enhanced interval content with duration and times
+        const intervalContent = document.createElement('div');
+        intervalContent.className = 'timeline-interval-content';
+        
+        const durationSpan = document.createElement('div');
+        durationSpan.className = 'timeline-interval-duration';
+        durationSpan.textContent = `${interval.duration.toFixed(1)}h`;
+        
+        const timesSpan = document.createElement('div');
+        timesSpan.className = 'timeline-interval-times';
+        const startTime = interval.startDT.toFormat('h:mm a');
+        const endTime = interval.endDT.toFormat('h:mm a');
+        timesSpan.textContent = `${startTime}-${endTime}`;
+        
+        intervalContent.appendChild(durationSpan);
+        intervalContent.appendChild(timesSpan);
+        
+        // Click handler
+        intervalBar.addEventListener('click', () => {
+          // Clear previous selections
+          document.querySelectorAll('.timeline-row').forEach(r => r.classList.remove('selected'));
+          document.querySelectorAll('.timeline-interval').forEach(i => i.classList.remove('selected'));
+          document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+          
+          // Select this row and interval
+          row.classList.add('selected');
+          intervalBar.classList.add('selected');
+          
+          showDetailPanel(interval);
+        });
+        
+        // Enhanced tooltip
+        intervalBar.title = `${interval.dayLabel} (${interval.startDT.weekdayLong})\n${startTime} - ${endTime}\nDuration: ${interval.duration.toFixed(1)} hours\nClick for details`;
+        
+        intervalBar.appendChild(intervalContent);
+        barContainer.appendChild(intervalBar);
+        row.appendChild(barContainer);
+        
+        // Day label
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'timeline-day';
+        dayDiv.textContent = interval.startDT.weekdayShort;
+        row.appendChild(dayDiv);
+        
+        rowsDiv.appendChild(row);
+      });
+      
+      gridDiv.appendChild(rowsDiv);
+      container.appendChild(gridDiv);
+    }
+
+    function renderCards(data) {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      container.className = 'intervals-container';
+      
+      const { intervals, sunThreshold } = data;
+      
+      if (intervals.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 50px; color: #666;">
+            No dark sky intervals found with these criteria.
+          </div>
+        `;
+        return;
+      }
+
+      intervals.forEach((interval, index) => {
+        const card = document.createElement('div');
+        card.className = 'interval-card';
+        
+        const dayOfWeek = interval.startDT.weekdayLong;
+        const startTime = interval.startDT.toFormat('h:mm a');
+        const endTime = interval.endDT.toFormat('h:mm a');
+        const duration = interval.duration.toFixed(1);
+        
+        // Create visual timeline bar
+        const totalMinutes = 19 * 60;
+        const startMinutes = interval.x0 * 60;
+        const durationMinutes = (interval.x1 - interval.x0) * 60;
+        const startPercent = (startMinutes / totalMinutes) * 100;
+        const widthPercent = (durationMinutes / totalMinutes) * 100;
+        
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="date-info">
+              <div class="date">${interval.dayLabel}</div>
+              <div class="day">${dayOfWeek}</div>
+            </div>
+            <div class="duration-badge">${duration}h</div>
+          </div>
+          
+          <div class="time-info">
+            <div class="time-range">
+              <span class="start-time">${startTime}</span>
+              <span class="arrow">→</span>
+              <span class="end-time">${endTime}</span>
+            </div>
+          </div>
+          
+          <div class="timeline-container">
+            <div class="timeline-track">
+              <div class="timeline-bar" style="left: ${startPercent}%; width: ${widthPercent}%;"></div>
+            </div>
+            <div class="timeline-labels">
+              <span class="timeline-start">4 PM</span>
+              <span class="timeline-mid">12 AM</span>
+              <span class="timeline-end">11 AM</span>
+            </div>
+          </div>
+        `;
+        
+        card.addEventListener('click', () => {
+          // Remove previous selection
+          document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+          // Add selection to clicked card
+          card.classList.add('selected');
+          showDetailPanel(interval);
+        });
+        
+        container.appendChild(card);
+      });
+    }
+
+    function renderHybrid(data) {
+      const container = document.getElementById('chartContainer');
+      container.innerHTML = '';
+      
+      // Create a compact timeline at the top
+      const timelineDiv = document.createElement('div');
+      timelineDiv.style.marginBottom = '20px';
+      timelineDiv.className = 'timeline-view';
+      timelineDiv.style.padding = '15px';
+      container.appendChild(timelineDiv);
+      
+      // Create cards container below
+      const cardsDiv = document.createElement('div');
+      cardsDiv.className = 'intervals-container';
+      cardsDiv.style.maxHeight = '400px';
+      container.appendChild(cardsDiv);
+      
+      const { intervals, sunThreshold } = data;
+      
+      if (intervals.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 50px; color: #666;">
+            No dark sky intervals found with these criteria.
+          </div>
+        `;
+        return;
+      }
+
+      // Render compact timeline header
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'timeline-header';
+      headerDiv.innerHTML = `
+        <div class="timeline-title" style="font-size: 16px;">Quick Overview</div>
+        <div class="timeline-legend">
+          <span>${intervals.length} nights</span>
+          <span>Sun < ${sunThreshold}°</span>
+          <span style="color: #ff6b6b;">● Short</span>
+          <span style="color: #667eea;">● Medium</span>
+          <span style="color: #26de81;">● Long</span>
+        </div>
+      `;
+      timelineDiv.appendChild(headerDiv);
+
+      // Compact timeline grid
+      const gridDiv = document.createElement('div');
+      gridDiv.className = 'timeline-grid';
+      gridDiv.style.minWidth = '800px';
+      
+      // Simplified hour labels
+      const hoursDiv = document.createElement('div');
+      hoursDiv.className = 'timeline-hours';
+      const hours = ['6PM', '8PM', '10PM', '12AM', '2AM', '4AM', '6AM', '8AM'];
+      hours.forEach(hour => {
+        const span = document.createElement('span');
+        span.textContent = hour;
+        span.style.fontSize = '10px';
+        hoursDiv.appendChild(span);
+      });
+      gridDiv.appendChild(hoursDiv);
+
+      // Compact timeline rows
+      const rowsDiv = document.createElement('div');
+      rowsDiv.className = 'timeline-rows';
+      
+      intervals.slice(0, 7).forEach((interval, index) => { // Show only first 7 for compact view
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
+        row.style.minHeight = '24px';
+        
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'timeline-date';
+        dateDiv.textContent = interval.dayLabel;
+        dateDiv.style.fontSize = '11px';
+        row.appendChild(dateDiv);
+        
+        const barContainer = document.createElement('div');
+        barContainer.className = 'timeline-bar-container';
+        barContainer.style.height = '20px';
+        
+        const startPercent = (interval.x0 / 19) * 100;
+        const widthPercent = ((interval.x1 - interval.x0) / 19) * 100;
+        
+        const intervalBar = document.createElement('div');
+        intervalBar.className = `timeline-interval ${getDurationClass(interval.duration)}`;
+        intervalBar.style.left = `${startPercent}%`;
+        intervalBar.style.width = `${Math.max(widthPercent, 8)}%`;
+        intervalBar.style.height = '16px';
+        intervalBar.style.top = '2px';
+        
+        const intervalText = document.createElement('div');
+        intervalText.className = 'timeline-interval-duration';
+        intervalText.style.fontSize = '9px';
+        intervalText.textContent = `${interval.duration.toFixed(1)}h`;
+        
+        intervalBar.addEventListener('click', () => {
+          // Update both timeline and cards selection
+          document.querySelectorAll('.timeline-row').forEach(r => r.classList.remove('selected'));
+          document.querySelectorAll('.timeline-interval').forEach(i => i.classList.remove('selected'));
+          document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+          
+          row.classList.add('selected');
+          intervalBar.classList.add('selected');
+          
+          const cardIndex = intervals.indexOf(interval);
+          const card = document.querySelectorAll('.interval-card')[cardIndex];
+          if (card) {
+            card.classList.add('selected');
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          
+          showDetailPanel(interval);
+        });
+        
+        intervalBar.appendChild(intervalText);
+        barContainer.appendChild(intervalBar);
+        row.appendChild(barContainer);
+        
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'timeline-day';
+        dayDiv.textContent = interval.startDT.weekdayShort;
+        dayDiv.style.fontSize = '9px';
+        row.appendChild(dayDiv);
+        
+        rowsDiv.appendChild(row);
+      });
+      
+      gridDiv.appendChild(rowsDiv);
+      timelineDiv.appendChild(gridDiv);
+
+      // Render all cards below
+      intervals.forEach((interval, index) => {
+        const card = document.createElement('div');
+        card.className = 'interval-card';
+        
+        const dayOfWeek = interval.startDT.weekdayLong;
+        const startTime = interval.startDT.toFormat('h:mm a');
+        const endTime = interval.endDT.toFormat('h:mm a');
+        const duration = interval.duration.toFixed(1);
+        
+        const totalMinutes = 19 * 60;
+        const startMinutes = interval.x0 * 60;
+        const durationMinutes = (interval.x1 - interval.x0) * 60;
+        const startPercent = (startMinutes / totalMinutes) * 100;
+        const widthPercent = (durationMinutes / totalMinutes) * 100;
+        
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="date-info">
+              <div class="date">${interval.dayLabel}</div>
+              <div class="day">${dayOfWeek}</div>
+            </div>
+            <div class="duration-badge">${duration}h</div>
+          </div>
+          
+          <div class="time-info">
+            <div class="time-range">
+              <span class="start-time">${startTime}</span>
+              <span class="arrow">→</span>
+              <span class="end-time">${endTime}</span>
+            </div>
+          </div>
+          
+          <div class="timeline-container">
+            <div class="timeline-track">
+              <div class="timeline-bar" style="left: ${startPercent}%; width: ${widthPercent}%;"></div>
+            </div>
+            <div class="timeline-labels">
+              <span class="timeline-start">4 PM</span>
+              <span class="timeline-mid">12 AM</span>
+              <span class="timeline-end">11 AM</span>
+            </div>
+          </div>
+        `;
+        
+        card.addEventListener('click', () => {
+          // Update both timeline and cards selection
+          document.querySelectorAll('.timeline-row').forEach(r => r.classList.remove('selected'));
+          document.querySelectorAll('.timeline-interval').forEach(i => i.classList.remove('selected'));
+          document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+          
+          card.classList.add('selected');
+          
+          // Select corresponding timeline row if visible
+          if (index < 7) {
+            const timelineRows = document.querySelectorAll('.timeline-row');
+            const timelineIntervals = document.querySelectorAll('.timeline-interval');
+            if (timelineRows[index] && timelineIntervals[index]) {
+              timelineRows[index].classList.add('selected');
+              timelineIntervals[index].classList.add('selected');
+            }
+          }
+          
+          showDetailPanel(interval);
+        });
+        
+        cardsDiv.appendChild(card);
+      });
+    }
+
+    function renderChart(data) {
+      hideDetailPanel();
+      
+      switch(currentView) {
+        case 'timeline':
+          renderTimeline(data);
+          break;
+        case 'cards':
+          renderCards(data);
+          break;
+        case 'hybrid':
+          renderHybrid(data);
+          break;
+      }
+      
+      updateStats(data);
+    }
+
+    function updateStats(data) {
+      const { intervals, totalDarkHours, longestInterval, shortestInterval, sunThreshold } = data;
+      
+      if (intervals.length === 0) {
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-item">
+            <div class="stat-value">0</div>
+            <div class="stat-label">Dark Sky Intervals</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">Sun ${sunThreshold}°</div>
+            <div class="stat-label">Sun Threshold</div>
+          </div>
+        `;
+        return;
+      }
+
+      const avgDarkHours = totalDarkHours / intervals.length;
+      const statsHtml = `
+        <div class="stat-item">
+          <div class="stat-value">${intervals.length}</div>
+          <div class="stat-label">Dark Sky Intervals</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${avgDarkHours.toFixed(1)}h</div>
+          <div class="stat-label">Average Duration</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${longestInterval.toFixed(1)}h</div>
+          <div class="stat-label">Longest Interval</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${shortestInterval.toFixed(1)}h</div>
+          <div class="stat-label">Shortest Interval</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${totalDarkHours.toFixed(0)}h</div>
+          <div class="stat-label">Total Dark Hours</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">Sun ${sunThreshold}°</div>
+          <div class="stat-label">Sun Threshold</div>
+        </div>
+      `;
+      document.getElementById('stats').innerHTML = statsHtml;
+    }
+
+    async function recalculate() {
+      const updateBtn = document.getElementById('updateBtn');
+      const sunThreshold = parseFloat(document.getElementById('sunThreshold').value);
+      
+      updateBtn.disabled = true;
+      updateBtn.textContent = 'Calculating...';
+      
+      document.getElementById('chartContainer').innerHTML = '<div class="loading">Calculating intervals...</div>';
+      
+      try {
+        const { lat, lon } = getCoordinates();
+        console.log(`Recalculating with coordinates: ${lat}, ${lon} and sun threshold: ${sunThreshold}°`);
+        globalData = await calculateIntervals(sunThreshold, lat, lon);
+        renderChart(globalData);
+      } catch (error) {
+        console.error('Error calculating intervals:', error);
+        document.getElementById('chartContainer').innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+      } finally {
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Update Chart';
+      }
+    }
+
+    // Set up event handlers
+    document.addEventListener('DOMContentLoaded', async function() {
+      // View toggle handlers
+      document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentView = btn.dataset.view;
+          
+          if (globalData) {
+            renderChart(globalData);
+          }
+        });
+      });
+
+      // Control handlers
+      document.getElementById('updateBtn').addEventListener('click', recalculate);
+      document.getElementById('detectLocationBtn').addEventListener('click', detectLocation);
+      
+      // Click outside to hide detail panel
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.interval-card') && 
+            !e.target.closest('.timeline-interval') && 
+            !e.target.closest('.detail-panel')) {
+          hideDetailPanel();
+          // Clear selections
+          document.querySelectorAll('.timeline-row').forEach(r => r.classList.remove('selected'));
+          document.querySelectorAll('.timeline-interval').forEach(i => i.classList.remove('selected'));
+          document.querySelectorAll('.interval-card').forEach(c => c.classList.remove('selected'));
+        }
+      });
+      
+      // Initial calculation with default coordinates (uses your original calculateIntervals function)
+      try {
+        const { lat, lon } = getCoordinates();
+        globalData = await calculateIntervals(-18, lat, lon);
+        renderChart(globalData);
+      } catch (error) {
+        console.error('Error on initial load:', error);
+        document.getElementById('chartContainer').innerHTML = `<div class="loading">Error loading: ${error.message}<br><small>Make sure astronomical-calculations.js is loaded</small></div>`;
+      }
+    });
+  </script>
+</body>
+</html>
